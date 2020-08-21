@@ -2,6 +2,7 @@ package com.example.hibernatefilter1;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -10,6 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.PostConstruct;
+
+import java.util.List;
+import java.util.Map;
 
 @RequiredArgsConstructor
 @RestController
@@ -20,11 +26,27 @@ public class HibernateFilter1Application implements CommandLineRunner {
         SpringApplication.run(HibernateFilter1Application.class, args);
     }
 
+    @Value("${rollout-user-tenant-flow.user-ids:}")
+    private List<Long> userIds;
+
+    @Value("${rollout-user-tenant-flow.user-ids2:0}")
+    private Long userId2;
+
+    @Value("${rollout-user-tenant-flow.user-ids3:}")
+    private String userId3;
+
     private final FolderRepository folderRepository;
 
     private final DocumentContextRepository documentContextRepository;
 
     private final FolderReferenceTypeRepository folderReferenceTypeRepository;
+
+    private final DocumentRepository documentRepository;
+
+    @PostConstruct
+    public void postC() {
+        System.out.println("");
+    }
 
     @Override
     @Transactional
@@ -59,10 +81,11 @@ public class HibernateFilter1Application implements CommandLineRunner {
             if (i % 2 == 0) {
                 document.setDocumentContext(tenantContext);
                 document.setContextExternalId(String.valueOf(i));
+                document.setAttributes(Map.of("attr", String.valueOf(i)));
             } else {
                 document.setDocumentContext(ownerContext);
                 document.setContextExternalId(String.valueOf(i));
-
+                document.setAttributes(Map.of("attr", String.valueOf(i)));
             }
 
             folder.addDocument(document);
@@ -92,5 +115,13 @@ public class HibernateFilter1Application implements CommandLineRunner {
         Folder folder = folderRepository.findByContext2(1L, "Blah").orElseThrow();
 
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/documents")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<Document>> findByAttribute(@RequestParam String name,
+                                                          @RequestParam String value) {
+
+        return ResponseEntity.ok(documentRepository.findByAttribute(name, value));
     }
 }
